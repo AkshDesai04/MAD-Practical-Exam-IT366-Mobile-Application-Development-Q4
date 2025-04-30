@@ -10,6 +10,7 @@ import '../services/auth_service.dart';
 import 'add_material_screen.dart';
 import 'material_detail_screen.dart';
 import 'withdrawal_logs_screen.dart';
+import 'admin_dashboard_screen.dart';
 import '../services/material_service.dart';
 
 final materialServiceProvider = Provider((ref) => MaterialService(ref));
@@ -75,6 +76,19 @@ class MaterialListScreen extends ConsumerWidget {
         backgroundColor: Theme.of(context).colorScheme.primary,
         foregroundColor: Theme.of(context).colorScheme.onPrimary,
         actions: [
+          if (currentUser?.username == 'admin' && currentUser?.role == UserRole.admin)
+            IconButton(
+              icon: const Icon(Icons.dashboard),
+              onPressed: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => const AdminDashboardScreen(),
+                  ),
+                );
+              },
+              tooltip: 'Dashboard',
+            ),
           if (currentUser?.username == 'admin' && currentUser?.role == UserRole.admin)
             IconButton(
               icon: const Icon(Icons.history),
