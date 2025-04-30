@@ -1,27 +1,33 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'src/screens/login_screen.dart';
 import 'src/screens/material_list_screen.dart';
+import 'src/services/auth_service.dart';
 
 void main() {
   runApp(
     const ProviderScope(
-      child: MyApp(),
+      child: MaterialInventoryApp(),
     ),
   );
 }
 
-class MyApp extends StatelessWidget {
-  const MyApp({super.key});
+class MaterialInventoryApp extends ConsumerWidget {
+  const MaterialInventoryApp({super.key});
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    final isAuthenticated = ref.watch(isAuthenticatedProvider);
+
     return MaterialApp(
       title: 'Material Inventory',
       theme: ThemeData(
-        primarySwatch: Colors.blue,
+        colorScheme: ColorScheme.fromSeed(seedColor: Colors.blue),
         useMaterial3: true,
       ),
-      home: const MaterialListScreen(),
+      home: isAuthenticated
+          ? const MaterialListScreen()
+          : const LoginScreen(),
     );
   }
 }

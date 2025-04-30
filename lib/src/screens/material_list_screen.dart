@@ -2,7 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_slidable/flutter_slidable.dart';
 import '../models/material_item.dart';
+import '../models/user.dart';
 import '../providers/material_provider.dart';
+import '../services/auth_service.dart';
 import 'add_material_screen.dart';
 import 'material_detail_screen.dart';
 
@@ -12,12 +14,22 @@ class MaterialListScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final materials = ref.watch(materialsProvider);
+    final currentUser = ref.watch(currentUserProvider);
 
     return Scaffold(
       appBar: AppBar(
         title: const Text('Material Inventory'),
         backgroundColor: Theme.of(context).colorScheme.primary,
         foregroundColor: Theme.of(context).colorScheme.onPrimary,
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.logout),
+            onPressed: () {
+              ref.read(authServiceProvider).logout();
+            },
+            tooltip: 'Logout',
+          ),
+        ],
       ),
       body: materials.when(
         data: (materials) {
@@ -51,22 +63,24 @@ class MaterialListScreen extends ConsumerWidget {
             itemBuilder: (context, index) {
               final material = materials[index];
               return Slidable(
-                endActionPane: ActionPane(
-                  motion: const ScrollMotion(),
-                  children: [
-                    SlidableAction(
-                      onPressed: (context) async {
-                        final repository = ref.read(materialRepositoryProvider);
-                        await repository.deleteMaterial(material.id);
-                        ref.invalidate(materialsProvider);
-                      },
-                      backgroundColor: Colors.red,
-                      foregroundColor: Colors.white,
-                      icon: Icons.delete,
-                      label: 'Delete',
-                    ),
-                  ],
-                ),
+                endActionPane: currentUser?.username == 'admin' && currentUser?.role == UserRole.admin
+                    ? ActionPane(
+                        motion: const ScrollMotion(),
+                        children: [
+                          SlidableAction(
+                            onPressed: (context) async {
+                              final repository = ref.read(materialRepositoryProvider);
+                              await repository.deleteMaterial(material.id);
+                              ref.invalidate(materialsProvider);
+                            },
+                            backgroundColor: Colors.red,
+                            foregroundColor: Colors.white,
+                            icon: Icons.delete,
+                            label: 'Delete',
+                          ),
+                        ],
+                      )
+                    : null,
                 child: Card(
                   margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
                   child: ListTile(
