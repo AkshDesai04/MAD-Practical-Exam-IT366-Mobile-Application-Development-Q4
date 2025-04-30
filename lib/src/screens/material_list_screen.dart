@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_slidable/flutter_slidable.dart';
+import 'package:path_provider/path_provider.dart';
+import 'dart:io';
 import '../models/material_item.dart';
 import '../models/user.dart';
 import '../providers/material_provider.dart';
@@ -10,6 +12,52 @@ import 'material_detail_screen.dart';
 
 class MaterialListScreen extends ConsumerWidget {
   const MaterialListScreen({super.key});
+
+  Future<void> _exportToCSV(List<MaterialItem> materials, BuildContext context) async {
+    try {
+      // Create CSV content
+      final csvContent = StringBuffer();
+      // Add headers
+      csvContent.writeln('Name,Description,Stock,Unit Cost,Total Value,Last Updated');
+      
+      // Add data rows
+      for (final material in materials) {
+        csvContent.writeln(
+          '"${material.name}","${material.description}",'
+          '${material.stock},${material.unitCost},'
+          '${material.totalValue},"${material.lastUpdated}"'
+        );
+      }
+
+      // Get the downloads directory
+      final directory = await getDownloadsDirectory();
+      if (directory == null) {
+        throw Exception('Could not access downloads directory');
+      }
+
+      // Create the file
+      final file = File('${directory.path}/material_inventory_${DateTime.now().millisecondsSinceEpoch}.csv');
+      await file.writeAsString(csvContent.toString());
+
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('File saved to: ${file.path}'),
+            backgroundColor: Colors.green,
+          ),
+        );
+      }
+    } catch (e) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error exporting data: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
+  }
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -22,6 +70,25 @@ class MaterialListScreen extends ConsumerWidget {
         backgroundColor: Theme.of(context).colorScheme.primary,
         foregroundColor: Theme.of(context).colorScheme.onPrimary,
         actions: [
+          IconButton(
+            icon: const Icon(Icons.download),
+            onPressed: () async {
+              final materialsData = await ref.read(materialsProvider.future);
+              if (materialsData.isNotEmpty) {
+                await _exportToCSV(materialsData, context);
+              } else {
+                if (context.mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                      content: Text('No materials to export'),
+                      backgroundColor: Colors.orange,
+                    ),
+                  );
+                }
+              }
+            },
+            tooltip: 'Export to CSV',
+          ),
           IconButton(
             icon: const Icon(Icons.logout),
             onPressed: () {
