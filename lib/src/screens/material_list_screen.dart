@@ -9,6 +9,7 @@ import '../providers/material_provider.dart';
 import '../services/auth_service.dart';
 import 'add_material_screen.dart';
 import 'material_detail_screen.dart';
+import 'withdrawal_logs_screen.dart';
 
 class MaterialListScreen extends ConsumerWidget {
   const MaterialListScreen({super.key});
@@ -70,6 +71,19 @@ class MaterialListScreen extends ConsumerWidget {
         backgroundColor: Theme.of(context).colorScheme.primary,
         foregroundColor: Theme.of(context).colorScheme.onPrimary,
         actions: [
+          if (currentUser?.username == 'admin' && currentUser?.role == UserRole.admin)
+            IconButton(
+              icon: const Icon(Icons.history),
+              onPressed: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => const WithdrawalLogsScreen(),
+                  ),
+                );
+              },
+              tooltip: 'View Logs',
+            ),
           IconButton(
             icon: const Icon(Icons.download),
             onPressed: () async {

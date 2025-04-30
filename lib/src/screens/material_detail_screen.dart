@@ -2,7 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../models/material_item.dart';
 import '../models/user.dart';
+import '../models/withdrawal_log.dart';
 import '../providers/material_provider.dart';
+import '../providers/withdrawal_log_provider.dart';
 import '../services/auth_service.dart';
 import 'edit_material_screen.dart';
 
@@ -10,6 +12,63 @@ class MaterialDetailScreen extends ConsumerWidget {
   final MaterialItem material;
 
   const MaterialDetailScreen({super.key, required this.material});
+
+  Future<void> _withdrawMaterial(BuildContext context, WidgetRef ref, int quantity) async {
+    if (quantity > material.stock) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Cannot withdraw more than available stock'),
+          backgroundColor: Colors.red,
+        ),
+      );
+      return;
+    }
+
+    final currentUser = ref.read(currentUserProvider);
+    if (currentUser == null) return;
+
+    try {
+      // Update material stock
+      final repository = ref.read(materialRepositoryProvider);
+      await repository.updateMaterial(
+        material.copyWith(stock: material.stock - quantity),
+      );
+
+      // Add withdrawal log
+      final logRepository = ref.read(withdrawalLogRepositoryProvider);
+      await logRepository.addLog(
+        WithdrawalLog(
+          materialId: material.id,
+          materialName: material.name,
+          quantity: quantity,
+          timestamp: DateTime.now(),
+          username: currentUser.username,
+        ),
+      );
+
+      // Refresh data
+      ref.invalidate(materialsProvider);
+      ref.invalidate(withdrawalLogsProvider);
+
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Material withdrawn successfully'),
+            backgroundColor: Colors.green,
+          ),
+        );
+      }
+    } catch (e) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error withdrawing material: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
+  }
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -135,6 +194,49 @@ class MaterialDetailScreen extends ConsumerWidget {
                   ],
                 ),
               ),
+            ),
+            const SizedBox(height: 16),
+            ElevatedButton.icon(
+              onPressed: () async {
+                final quantity = await showDialog<int>(
+                  context: context,
+                  builder: (context) {
+                    final controller = TextEditingController();
+                    return AlertDialog(
+                      title: const Text('Withdraw Material'),
+                      content: TextField(
+                        controller: controller,
+                        keyboardType: TextInputType.number,
+                        decoration: const InputDecoration(
+                          labelText: 'Quantity',
+                          border: OutlineInputBorder(),
+                        ),
+                      ),
+                      actions: [
+                        TextButton(
+                          onPressed: () => Navigator.pop(context),
+                          child: const Text('Cancel'),
+                        ),
+                        TextButton(
+                          onPressed: () {
+                            final quantity = int.tryParse(controller.text);
+                            if (quantity != null && quantity > 0) {
+                              Navigator.pop(context, quantity);
+                            }
+                          },
+                          child: const Text('Withdraw'),
+                        ),
+                      ],
+                    );
+                  },
+                );
+
+                if (quantity != null) {
+                  await _withdrawMaterial(context, ref, quantity);
+                }
+              },
+              icon: const Icon(Icons.remove_circle_outline),
+              label: const Text('Withdraw Material'),
             ),
           ],
         ),
