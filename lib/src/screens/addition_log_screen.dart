@@ -25,23 +25,44 @@ class AdditionLogScreen extends ConsumerWidget {
               itemCount: additions.length,
               itemBuilder: (context, index) {
                 final addition = additions[index];
+                final isLowStock = addition.quantity < 10;
+                
                 return Card(
                   margin: const EdgeInsets.symmetric(
                     horizontal: 16,
                     vertical: 8,
                   ),
+                  color: isLowStock ? Colors.red.shade50 : null,
                   child: ListTile(
+                    leading: isLowStock
+                        ? const Icon(
+                            Icons.warning_amber_rounded,
+                            color: Colors.red,
+                          )
+                        : const Icon(Icons.add_circle_outline),
                     title: Text(
                       addition.materialName,
-                      style: const TextStyle(
+                      style: TextStyle(
                         fontWeight: FontWeight.bold,
+                        color: isLowStock ? Colors.red : null,
                       ),
                     ),
                     subtitle: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text('Material ID: ${addition.materialId}'),
-                        Text('Quantity Added: ${addition.quantity}'),
+                        Text(
+                          'Material ID: ${addition.materialId}',
+                          style: TextStyle(
+                            color: isLowStock ? Colors.red : null,
+                          ),
+                        ),
+                        Text(
+                          'Quantity Added: ${addition.quantity}',
+                          style: TextStyle(
+                            color: isLowStock ? Colors.red : null,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
                         Text('Date: ${addition.date}'),
                         Text('User: ${addition.username}'),
                         if (addition.notes.isNotEmpty)

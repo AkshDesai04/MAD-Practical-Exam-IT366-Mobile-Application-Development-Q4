@@ -3,39 +3,36 @@ import '../models/user.dart';
 
 final isAuthenticatedProvider = StateProvider<bool>((ref) => false);
 
+final authServiceProvider = Provider((ref) => AuthService(ref));
+
 class AuthService {
   final Ref _ref;
+  User? _currentUser;
 
   AuthService(this._ref);
-
-  static const List<User> _users = [
-    User(
-      username: 'admin',
-      password: 'admin',
-      role: UserRole.admin,
-    ),
-    User(
-      username: 'operator',
-      password: 'operator',
-      role: UserRole.operator,
-    ),
-  ];
-
-  User? _currentUser;
 
   User? get currentUser => _currentUser;
 
   bool get isAuthenticated => _ref.read(isAuthenticatedProvider);
 
   Future<bool> login(String username, String password) async {
-    final user = _users.firstWhere(
-      (user) => user.username == username && user.password == password,
-      orElse: () => throw Exception('Invalid credentials'),
-    );
-    
-    _currentUser = user;
-    _ref.read(isAuthenticatedProvider.notifier).state = true;
-    return true;
+    // For demo purposes, we'll use a simple check
+    if (username == 'admin' && password == 'admin') {
+      _currentUser = const User(
+        username: 'admin',
+        role: UserRole.admin,
+      );
+      _ref.read(isAuthenticatedProvider.notifier).state = true;
+      return true;
+    } else if (username == 'operator' && password == 'operator') {
+      _currentUser = const User(
+        username: 'operator',
+        role: UserRole.operator,
+      );
+      _ref.read(isAuthenticatedProvider.notifier).state = true;
+      return true;
+    }
+    return false;
   }
 
   void logout() {
@@ -43,10 +40,6 @@ class AuthService {
     _currentUser = null;
   }
 }
-
-final authServiceProvider = Provider<AuthService>((ref) {
-  return AuthService(ref);
-});
 
 final currentUserProvider = Provider<User?>((ref) {
   return ref.watch(authServiceProvider).currentUser;

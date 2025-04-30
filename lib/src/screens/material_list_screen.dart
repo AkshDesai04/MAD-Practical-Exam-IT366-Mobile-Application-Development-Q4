@@ -10,6 +10,9 @@ import '../services/auth_service.dart';
 import 'add_material_screen.dart';
 import 'material_detail_screen.dart';
 import 'withdrawal_logs_screen.dart';
+import '../services/material_service.dart';
+
+final materialServiceProvider = Provider((ref) => MaterialService(ref));
 
 class MaterialListScreen extends ConsumerWidget {
   const MaterialListScreen({super.key});
@@ -62,7 +65,8 @@ class MaterialListScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final materials = ref.watch(materialsProvider);
+    final materialService = ref.watch(materialServiceProvider);
+    final materials = materialService.getAllMaterials();
     final currentUser = ref.watch(currentUserProvider);
 
     return Scaffold(
@@ -112,68 +116,50 @@ class MaterialListScreen extends ConsumerWidget {
           ),
         ],
       ),
-      body: materials.when(
-        data: (materials) {
-          if (materials.isEmpty) {
-            return Center(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  const Icon(
-                    Icons.inventory_2_outlined,
-                    size: 64,
-                    color: Colors.grey,
-                  ),
-                  const SizedBox(height: 16),
-                  Text(
-                    'No materials found',
-                    style: Theme.of(context).textTheme.titleLarge,
-                  ),
-                  const SizedBox(height: 8),
-                  const Text(
-                    'Add some materials to get started',
-                    style: TextStyle(color: Colors.grey),
-                  ),
-                ],
-              ),
-            );
-          }
+      body: materials.isEmpty
+          ? const Center(
+              child: Text('No materials found'),
+            )
+          : ListView.builder(
+              itemCount: materials.length,
+              itemBuilder: (context, index) {
+                final material = materials[index];
+                final isLowStock = material.stock < 10;
 
-          return ListView.builder(
-            itemCount: materials.length,
-            itemBuilder: (context, index) {
-              final material = materials[index];
-              return Slidable(
-                endActionPane: currentUser?.username == 'admin' && currentUser?.role == UserRole.admin
-                    ? ActionPane(
-                        motion: const ScrollMotion(),
-                        children: [
-                          SlidableAction(
-                            onPressed: (context) async {
-                              final repository = ref.read(materialRepositoryProvider);
-                              await repository.deleteMaterial(material.id);
-                              ref.invalidate(materialsProvider);
-                            },
-                            backgroundColor: Colors.red,
-                            foregroundColor: Colors.white,
-                            icon: Icons.delete,
-                            label: 'Delete',
-                          ),
-                        ],
-                      )
-                    : null,
-                child: Card(
-                  margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                return Card(
+                  margin: const EdgeInsets.symmetric(
+                    horizontal: 16,
+                    vertical: 8,
+                  ),
+                  color: isLowStock ? Colors.red.shade50 : null,
                   child: ListTile(
+                    leading: isLowStock
+                        ? const Icon(
+                            Icons.warning_amber_rounded,
+                            color: Colors.red,
+                          )
+                        : const Icon(Icons.inventory_2_outlined),
                     title: Text(
                       material.name,
-                      style: const TextStyle(fontWeight: FontWeight.bold),
+                      style: TextStyle(
+                        fontWeight: FontWeight.bold,
+                        color: isLowStock ? Colors.red : null,
+                      ),
                     ),
                     subtitle: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text('Stock: ${material.stock}'),
-                        Text('Total Value: \$${material.totalValue.toStringAsFixed(2)}'),
+                        Text(
+                          'Current Stock: ${material.stock}',
+                          style: TextStyle(
+                            color: isLowStock ? Colors.red : null,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                        Text('Unit Cost: \$${material.unitCost.toStringAsFixed(2)}'),
+                        Text(
+                          'Total Value: \$${(material.stock * material.unitCost).toStringAsFixed(2)}',
+                        ),
                       ],
                     ),
                     onTap: () {
@@ -185,36 +171,9 @@ class MaterialListScreen extends ConsumerWidget {
                       );
                     },
                   ),
-                ),
-              );
-            },
-          );
-        },
-        loading: () => const Center(child: CircularProgressIndicator()),
-        error: (error, stack) => Center(
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              const Icon(
-                Icons.error_outline,
-                size: 64,
-                color: Colors.red,
-              ),
-              const SizedBox(height: 16),
-              Text(
-                'Error loading materials',
-                style: Theme.of(context).textTheme.titleLarge,
-              ),
-              const SizedBox(height: 8),
-              Text(
-                error.toString(),
-                style: const TextStyle(color: Colors.grey),
-                textAlign: TextAlign.center,
-              ),
-            ],
-          ),
-        ),
-      ),
+                );
+              },
+            ),
       floatingActionButton: FloatingActionButton.extended(
         onPressed: () async {
           await Navigator.push(
