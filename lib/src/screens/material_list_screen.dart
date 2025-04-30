@@ -15,6 +15,11 @@ import '../services/material_service.dart';
 
 final materialServiceProvider = Provider((ref) => MaterialService(ref));
 
+final materialsProvider = StateProvider<List<MaterialItem>>((ref) {
+  final materialService = ref.watch(materialServiceProvider);
+  return materialService.getAllMaterials();
+});
+
 class MaterialListScreen extends ConsumerWidget {
   const MaterialListScreen({super.key});
 
@@ -66,8 +71,7 @@ class MaterialListScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final materialService = ref.watch(materialServiceProvider);
-    final materials = materialService.getAllMaterials();
+    final materials = ref.watch(materialsProvider);
     final currentUser = ref.watch(currentUserProvider);
 
     return Scaffold(
@@ -105,9 +109,8 @@ class MaterialListScreen extends ConsumerWidget {
           IconButton(
             icon: const Icon(Icons.download),
             onPressed: () async {
-              final materialsData = await ref.read(materialsProvider.future);
-              if (materialsData.isNotEmpty) {
-                await _exportToCSV(materialsData, context);
+              if (materials.isNotEmpty) {
+                await _exportToCSV(materials, context);
               } else {
                 if (context.mounted) {
                   ScaffoldMessenger.of(context).showSnackBar(
