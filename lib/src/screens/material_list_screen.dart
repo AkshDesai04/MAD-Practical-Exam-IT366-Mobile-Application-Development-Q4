@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_slidable/flutter_slidable.dart';
 import '../models/material_item.dart';
 import '../providers/material_provider.dart';
 import 'add_material_screen.dart';
@@ -14,13 +15,34 @@ class MaterialListScreen extends ConsumerWidget {
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Materials'),
+        title: const Text('Material Inventory'),
+        backgroundColor: Theme.of(context).colorScheme.primary,
+        foregroundColor: Theme.of(context).colorScheme.onPrimary,
       ),
       body: materials.when(
         data: (materials) {
           if (materials.isEmpty) {
-            return const Center(
-              child: Text('No materials found. Add some materials to get started.'),
+            return Center(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  const Icon(
+                    Icons.inventory_2_outlined,
+                    size: 64,
+                    color: Colors.grey,
+                  ),
+                  const SizedBox(height: 16),
+                  Text(
+                    'No materials found',
+                    style: Theme.of(context).textTheme.titleLarge,
+                  ),
+                  const SizedBox(height: 8),
+                  const Text(
+                    'Add some materials to get started',
+                    style: TextStyle(color: Colors.grey),
+                  ),
+                ],
+              ),
             );
           }
 
@@ -28,25 +50,77 @@ class MaterialListScreen extends ConsumerWidget {
             itemCount: materials.length,
             itemBuilder: (context, index) {
               final material = materials[index];
-              return ListTile(
-                title: Text(material.name),
-                subtitle: Text('Stock: ${material.stock} | Total Value: \$${material.totalValue.toStringAsFixed(2)}'),
-                onTap: () {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (context) => MaterialDetailScreen(material: material),
+              return Slidable(
+                endActionPane: ActionPane(
+                  motion: const ScrollMotion(),
+                  children: [
+                    SlidableAction(
+                      onPressed: (context) async {
+                        final repository = ref.read(materialRepositoryProvider);
+                        await repository.deleteMaterial(material.id);
+                        ref.invalidate(materialsProvider);
+                      },
+                      backgroundColor: Colors.red,
+                      foregroundColor: Colors.white,
+                      icon: Icons.delete,
+                      label: 'Delete',
                     ),
-                  );
-                },
+                  ],
+                ),
+                child: Card(
+                  margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                  child: ListTile(
+                    title: Text(
+                      material.name,
+                      style: const TextStyle(fontWeight: FontWeight.bold),
+                    ),
+                    subtitle: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text('Stock: ${material.stock}'),
+                        Text('Total Value: \$${material.totalValue.toStringAsFixed(2)}'),
+                      ],
+                    ),
+                    onTap: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => MaterialDetailScreen(material: material),
+                        ),
+                      );
+                    },
+                  ),
+                ),
               );
             },
           );
         },
         loading: () => const Center(child: CircularProgressIndicator()),
-        error: (error, stack) => Center(child: Text('Error: $error')),
+        error: (error, stack) => Center(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              const Icon(
+                Icons.error_outline,
+                size: 64,
+                color: Colors.red,
+              ),
+              const SizedBox(height: 16),
+              Text(
+                'Error loading materials',
+                style: Theme.of(context).textTheme.titleLarge,
+              ),
+              const SizedBox(height: 8),
+              Text(
+                error.toString(),
+                style: const TextStyle(color: Colors.grey),
+                textAlign: TextAlign.center,
+              ),
+            ],
+          ),
+        ),
       ),
-      floatingActionButton: FloatingActionButton(
+      floatingActionButton: FloatingActionButton.extended(
         onPressed: () async {
           await Navigator.push(
             context,
@@ -54,10 +128,10 @@ class MaterialListScreen extends ConsumerWidget {
               builder: (context) => const AddMaterialScreen(),
             ),
           );
-          // Refresh the materials list after returning from add screen
           ref.invalidate(materialsProvider);
         },
-        child: const Icon(Icons.add),
+        icon: const Icon(Icons.add),
+        label: const Text('Add Material'),
       ),
     );
   }
